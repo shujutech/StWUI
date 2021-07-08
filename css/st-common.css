@@ -1,0 +1,18 @@
+body {
+	background: #f3f6fa;
+}
+.ui.form div input {
+	width: auto !important;
+}
+::placeholder { 
+	color: gray !important;
+	opacity: 0.5 !important; /* Firefox */
+}
+:-ms-input-placeholder { /* Internet Explorer 10-11 */
+	color: gray !important;
+	opacity: 0.5 !important;
+}
+::-ms-input-placeholder { /* Microsoft Edge */
+	color: gray !important;
+	opacity: 0.5 !important;
+}
