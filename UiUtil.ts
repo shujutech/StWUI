@@ -131,46 +131,6 @@ class TextField extends Widget {
 					}
 				}
 			} 
-			/*
-			let selectSize: number = 0;
-			if (aTextElement.selectionEnd != null && aTextElement.selectionStart != null) {
-				selectSize = aTextElement.selectionEnd - aTextElement.selectionStart;
-			} 
-			let processKey: boolean = false;
-			if (selectSize <= 0 && aTextElement.selectionEnd == aTextElement.value.length) {
-				processKey = true;
-			} else {
-				if (selectSize >= aTextElement.value.length) {
-					aTextElement.value = '';
-					processKey = true;
-				}
-			}
-			if (processKey) {
-				if (evt.key) {
-					if (Generic.IsPrintable(evt.key)) {
-						let oldStr = aTextElement.value;
-						let newStr = TextField.MaskStr(oldStr, evt.key, aMaskStr, aMaxLen);
-						if (newStr == oldStr) {
-							evt.preventDefault();
-						} else {
-							setTimeout(() => {
-								aTextElement.value = newStr;
-							}, 100);
-						}
-					}
-				} 
-			} else {
-				if (evt.key) {
-					if (Generic.IsPrintable(evt.key)) {
-						let oldStr = aTextElement.value;
-						let newStr = TextField.MaskStr(oldStr, evt.key, aMaskStr, aMaxLen);
-						if (newStr == oldStr) {
-							evt.preventDefault();
-						}
-					}
-				} 
-			}
-			*/
 		})
 		aTextElement.addEventListener('blur', (evt) => {
 			let oldStr = aTextElement.value;
