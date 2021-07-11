@@ -126,6 +126,59 @@ class Widget implements WidgetInterface {
 	};
 }
 
+class Tooltip extends Widget {
+
+	static CreateTooltip(aMsg: string): HTMLSpanElement {
+		let tipParent: HTMLSpanElement = document.createElement('span');
+		tipParent.classList.add('tooltip');
+		tipParent.classList.add('bottom');
+		//tipParent.classList.add('top');
+		tipParent.style.marginLeft = '5px';
+
+		let tipIcon: HTMLSpanElement = document.createElement('span');
+		tipIcon.classList.add('info-icon');
+		tipIcon.innerHTML = 'i';
+
+		let tipMsg: HTMLSpanElement = document.createElement('span');
+		tipMsg.innerHTML = aMsg;
+		tipMsg.classList.add('tooltip-inner');
+
+		let tipAngle : HTMLSpanElement = document.createElement('span');
+		tipAngle.classList.add('tooltip-angle');
+
+		let tipInnerAngle : HTMLSpanElement = document.createElement('span');
+		tipInnerAngle.classList.add('tooltip-angle-inner');
+
+		tipAngle.appendChild(tipInnerAngle);
+		tipMsg.appendChild(tipAngle);
+		tipParent.appendChild(tipIcon);
+		tipParent.appendChild(tipMsg);
+
+		return tipParent;
+	}
+
+	private static GetTooltipParent(aTipElement: HTMLSpanElement): HTMLSpanElement {
+		if (aTipElement.classList.contains('tooltip')) {
+			return aTipElement;
+		} else {
+			const tipElement = aTipElement.querySelector('.tooltip') as HTMLSpanElement;
+			return tipElement;
+		}
+	}
+
+	static HideTooltip(aTipElement: HTMLSpanElement): void {
+		const tipElement = Tooltip.GetTooltipParent(aTipElement);
+		tipElement.style.display = 'none';
+	}
+
+	static ShowTooltipMsg(aTipElement: HTMLSpanElement, aMsg: string): void {
+		const tipElement = Tooltip.GetTooltipParent(aTipElement);
+		tipElement.style.display = 'inline-block';
+		const tipInnerElement = tipElement.querySelector('.tooltip-inner') as HTMLSpanElement;
+		tipInnerElement.innerHTML = aMsg;
+	}
+}
+
 /*
  * TextField
  * 
@@ -192,6 +245,9 @@ class TextField extends Widget {
 		extraLabel.style.color = 'red';
 		extraLabel.style.fontSize= 'large';
 
+		let tipInfo: HTMLSpanElement = Tooltip.CreateTooltip('');
+		Tooltip.HideTooltip(tipInfo);
+
 		let errImg: HTMLImageElement = document.createElement('img');
 		errImg.setAttribute('src', TextField.ImgErrorBlink);
 		errImg.style.display = 'none';
@@ -208,6 +264,7 @@ class TextField extends Widget {
 
 		labelArea.appendChild(label);
 		labelArea.appendChild(extraLabel);
+		labelArea.appendChild(tipInfo);
 		labelArea.appendChild(errImg);
 		labelArea.appendChild(errMsg);
 	
@@ -226,6 +283,18 @@ class TextField extends Widget {
 		
 		return(parent);
 	};
+
+	static ShowTooltip(aInputElement: HTMLInputElement, aMsg: string): void {
+		const parentElement = TextField.GetTextFieldParent(aInputElement);
+		const tipElement = parentElement.querySelector('.tooltip') as HTMLSpanElement;
+		Tooltip.ShowTooltipMsg(tipElement, aMsg);
+	}
+
+	static HideTooltip(aInputElement: HTMLInputElement): void {
+		const parentElement = TextField.GetTextFieldParent(aInputElement);
+		const tipElement = parentElement.querySelector('.tooltip') as HTMLSpanElement;
+		Tooltip.HideTooltip(tipElement);
+	}
 
 	private static GetTextFieldParent(aTextElement: HTMLInputElement): HTMLDivElement {
 		let result: HTMLDivElement = null!;
@@ -360,12 +429,18 @@ class Mask {
 					let numData: number = +aDataStr;
 					result = (Math.round(numData * 100) / 100).toFixed(maskDecimalPlace);
 				} else {
-					let decimalPart: number = +(aDataStr.substr(aDataStr.indexOf('.')) + '0');
-					let roundedStr: string = (Math.round(decimalPart * 100) / 100).toFixed(maskDecimalPlace);
+					let floatPart: number = +(aDataStr.substr(aDataStr.indexOf('.')) + '0');
+					let roundedStr: string = (Math.round(floatPart * 100) / 100).toFixed(maskDecimalPlace);
 					let roundedPart: string = roundedStr.substr(roundedStr.indexOf('.'));
 					let integerPart: string = aDataStr.substr(0, aDataStr.indexOf('.'));
 					result = integerPart + roundedPart;
 
+					// handle rounding of 0.9 -> 1.0
+					if ((floatPart + '').indexOf('0.9') >= 0 && roundedStr.indexOf('1.0') >= 0) {
+						//let roundedIntegerPart = +integerPart + 1;
+						//result = roundedIntegerPart + roundedPart;
+						console.log('Warn, over 17 digit, losing precision');
+					}
 				}
 			}
 		}
@@ -382,40 +457,6 @@ class Mask {
 		}
 		return result;
 	}
-
-	/*
-	private static LongEnough(aDataStr: string, aMaskStr: string): boolean {
-		let result: boolean = true;
-		let maskResult: string = '';
-		let reverseMask: string = Generic.ReverseString(aMaskStr);
-		let reverseData: string = Generic.ReverseString(aDataStr);
-		let cntrMask: number = 0;
-		let cntrData: number = 0;
-		for(cntrMask = 0; cntrMask < reverseMask.length; cntrMask++) {
-			let maskChar = reverseMask.charAt(cntrMask);
-			let dataChar = reverseData.charAt(cntrData++);
-			if (dataChar.length == 0) {
-				maskResult += maskChar;
-			} else if (dataChar != maskChar) {
-				if (Generic.IsNumeric(maskChar) || maskChar == '#') {
-					maskResult += dataChar;
-				} else {
-					maskResult += maskChar;
-					cntrData--;
-				}
-			} else {
-				maskResult += dataChar;
-			}
-		}
-
-		// continue padding if data len is > mask len
-		if (cntrData <= reverseData.length - 1) {
-			let remainData: number =  (reverseData.length - 1) - cntrData;
-			if (remainData >= 0) result = false;
-		}
-		return result;
-	}
-	*/ 
 
 	private static LongEnough(aDataStr: string, aMaskStr: string): boolean {
 		let result = Mask.PadMaskAndCheckLength(aDataStr, aMaskStr);
@@ -505,21 +546,34 @@ class Mask {
 		}
 	}
 
+	static GotSeparatorChar(aMaskStr: string): boolean {
+		for(let cntr: number = 0; cntr < aMaskStr.length; cntr++) {
+			if (Mask.isSeparatorChar(aMaskStr.charAt(cntr)))
+				return true;
+		}
+		return false;
+	}
+
+
 	static GetRepeatingMask(aMaskStr: string): string {
 		let result: string = '';
-		let repeatingStr: string = '';
-		for(let cntr: number = 0; cntr < aMaskStr.length; cntr++) {
-			let maskChar = aMaskStr.charAt(cntr);
-			repeatingStr += maskChar;
-			if (Mask.isSeparatorChar(maskChar)) {
-				let remainingPart: string = aMaskStr.substr(cntr + 1);
-				if (remainingPart.indexOf(repeatingStr) < 0) {
-					repeatingStr = ''; // reset if is separator char
-				} else {
-					result = repeatingStr;
-					break;
+		if (Mask.GotSeparatorChar(aMaskStr)) {
+			let repeatingStr: string = '';
+			for(let cntr: number = 0; cntr < aMaskStr.length; cntr++) {
+				let maskChar = aMaskStr.charAt(cntr);
+				repeatingStr += maskChar;
+				if (Mask.isSeparatorChar(maskChar)) {
+					let remainingPart: string = aMaskStr.substr(cntr + 1);
+					if (remainingPart.indexOf(repeatingStr) < 0) {
+						repeatingStr = ''; // reset if is separator char
+					} else {
+						result = repeatingStr;
+						break;
+					}
 				}
 			}
+		} else {
+			result = aMaskStr;
 		}
 		return result;
 	}
@@ -563,15 +617,10 @@ class Mask {
 		let keyPosition: number = aInputElement.selectionStart as number;
 		if (aMaxLen) {
 			if (aOldStr.length + aNewChar.length > aMaxLen) {
+				TextField.ShowTextFieldErrorMsg(aInputElement, 'Length exceeded');
 				return(aOldStr);
 			}
 		} else { // no length limit
-//console.log('oldstr: ' + aOldStr + ', ' + aNewChar);
-			//let afterMask: string = Mask.GetAfterMaskingData(aOldStr, aNewChar, aMaskStr, keyPosition);
-//let afterMask: string = Mask.GetAfterMaskingData(aOldStr + aNewChar, '', aMaskStr);
-if (aOldStr == '1234567890123456') {
-	console.log(aNewChar);
-}
 			let normaliseDigit : string = Mask.GetNormaliseDigitForPadding(aMaskStr, aOldStr, aNewChar, keyPosition)
 			if (normaliseDigit && Mask.LongEnough(normaliseDigit, aMaskStr) == false) { // if need to extend mask length 
 				aMaskStr = Mask.ExtendMaskLength(aMaskStr, normaliseDigit);
@@ -580,7 +629,7 @@ if (aOldStr == '1234567890123456') {
 					TextField.ShowTextFieldErrorMsg(aInputElement, 'Length exceeded');
 					return(aOldStr);
 				} else {
-console.log(normaliseDigit + ', ' + aMaskStr);
+					// do nothing
 				}
 			}
 		}
@@ -598,30 +647,9 @@ console.log(normaliseDigit + ', ' + aMaskStr);
 	private static GetAfterMaskingData(aOldStr: string, aNewChar: string, aMaskStr: string, keyPosition: number = -1): string {
 		let char2Remove: number[] = [];
 		let newStrData: string = aOldStr;
-		//let alreadyAppend: boolean = false;
 		if (Generic.IsNumeric(aNewChar) || aMaskStr.indexOf(aNewChar) >= 0 || aNewChar.length == 0) {
-			/*
-			newStrData = Mask.RemoveMask(newStrData, aMaskStr); 
-			if (Mask.Need2Normalise(newStrData, aMaskStr, aNewChar)) {
-				if (Mask.Need2AppendBeforeNormalise(newStrData, aMaskStr, aNewChar)) {
-					newStrData += aNewChar;
-					alreadyAppend = true;
-				}
-				newStrData = Mask.NormaliseDotPosition(newStrData, aMaskStr);
-			}
-			newStrData = Mask.GetDigitOnly(newStrData);
-			if (Generic.IsNumeric(aNewChar) && !alreadyAppend) newStrData += aNewChar;
-			let newNumData: number = +newStrData;  // remove any preceding zero
-			if (newNumData > Number.MAX_VALUE) throw new Error('Number is to large');
-			newStrData = newNumData + '';
-			if (Generic.IsNumeric(aNewChar) || aNewChar == '.') newStrData += aNewChar;
-			if (newStrData.indexOf('.') < 0) newStrData += '.';
-			newStrData = Mask.NormaliseDotPosition(newStrData, aMaskStr);
-			newStrData = Mask.GetDigitOnly(newStrData);
-			*/
 			newStrData = Mask.GetNormaliseDigitForPadding(aMaskStr, aOldStr, aNewChar, keyPosition);
 			newStrData = Mask.PadDataWithMask(newStrData, aMaskStr);
-console.log('MM' + newStrData);
 			for(let cntr = aMaskStr.length - 1; cntr >= 0; cntr--) {
 				let maskChar = aMaskStr.charAt(cntr);
 				let dataChar = newStrData.charAt(cntr);
@@ -671,73 +699,3 @@ console.log('MM' + newStrData);
 		return result;
 	}
 }
-/*
-	private static GetAfterMaskingData(aOldStr: string, aNewChar: string, aMaskStr: string): string {
-		let char2Remove: number[] = [];
-		let newStrData: string = aOldStr;
-		let alreadyAppend: boolean = false;
-		if (Generic.IsNumeric(aNewChar) || aMaskStr.indexOf(aNewChar) >= 0 || aNewChar.length == 0) {
-			newStrData = Mask.RemoveMask(newStrData, aMaskStr); 
-			if (Mask.Need2Normalise(newStrData, aMaskStr, aNewChar)) {
-				if (Mask.Need2AppendBeforeNormalise(newStrData, aMaskStr, aNewChar)) {
-					newStrData += aNewChar;
-					alreadyAppend = true;
-				}
-				newStrData = Mask.NormaliseDotPosition(newStrData, aMaskStr);
-			}
-			newStrData = Mask.GetDigitOnly(newStrData);
-			if (Generic.IsNumeric(aNewChar) && !alreadyAppend) newStrData += aNewChar;
-			let newNumData: number = +newStrData;  // remove any preceding zero
-			if (newNumData > Number.MAX_VALUE) throw new Error('Number is to large');
-			newStrData = newNumData + '';
-			newStrData = Mask.PadDataWithMask(newStrData, aMaskStr);
-			for(let cntr = aMaskStr.length - 1; cntr >= 0; cntr--) {
-				let maskChar = aMaskStr.charAt(cntr);
-				let dataChar = newStrData.charAt(cntr);
-				if (maskChar == '#') {
-					if (dataChar == '#') {
-						char2Remove.push(cntr);
-						dataChar = ' ';
-					}
-					let replaced: string = Generic.ReplaceChar(newStrData, dataChar, cntr);
-					replaced.length == 0 ? newStrData = dataChar + newStrData : newStrData = replaced;
-				} else if (dataChar.length == 0) {
-					newStrData = maskChar + newStrData; 
-				} else if (Generic.IsNumeric(maskChar) && Generic.IsNumeric(dataChar)) { 
-					let replaced: string = Generic.ReplaceChar(newStrData, dataChar, cntr);
-					replaced.length == 0 ? newStrData = dataChar + newStrData : newStrData = replaced;
-				} else if (Generic.IsNumeric(maskChar) && !Generic.IsNumeric(dataChar)) {
-					newStrData = dataChar + newStrData; 
-				} else if (maskChar == dataChar) {
-					let nextChar: string = newStrData.charAt(cntr - 1);
-					if (nextChar.length == 0 || nextChar == '#') {
-						if (nextChar == '#') {
-							char2Remove.push(cntr);
-							let replaced: string = Generic.ReplaceChar(newStrData, ' ', cntr);
-							replaced.length == 0 ? newStrData = dataChar + newStrData : newStrData = replaced;
-						} else {
-							let replaced: string = Generic.ReplaceChar(newStrData, dataChar, cntr);
-							replaced.length == 0 ? newStrData = dataChar + newStrData : newStrData = replaced;
-						}
-					}
-				} else {
-					let inserted = Generic.InsertChar(newStrData, maskChar, newStrData.length - cntr);
-					if (inserted.length == 0) { 
-						newStrData = maskChar + dataChar + newStrData; 
-					} else { 
-						newStrData = inserted;
-					}
-				}
-			}
-		}
-
-		let result: string = '';
-		for(let cntr: number = newStrData.length - 1; cntr >= 0; cntr--) {
-			if (char2Remove.indexOf(cntr) < 0) {
-				result = newStrData.charAt(cntr) + result;
-			}
-		}
-		return result;
-	}
-
-*/
