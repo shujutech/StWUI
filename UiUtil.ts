@@ -5,8 +5,26 @@
  * 
  */
 class Generic {
+	static IsAlpha(aValue: string): boolean {
+		let result: boolean = false;
+		if ((aValue >= 'a' && aValue <= 'z')
+		|| (aValue >= 'A' && aValue <= 'Z')
+		) {
+			result = true;
+		}
+		return result;
+	}
+
+	static CharOccurence(aData: string, aChar: string): number {
+		let result: number = 0;
+		for(let cntr: number = 0; cntr < aData.length; cntr++) {
+			if (aData.charAt(cntr) == aChar) result++;
+		}
+		return result;
+	}
+
 	static IsNumeric(aValue: string): boolean {
-		let result = false;
+		let result: boolean = false;
 		aValue = aValue.trim();
 		if (! aValue) return result;
 		let num: number = +aValue;
@@ -149,9 +167,9 @@ class Tooltip extends Widget {
 		let tipInnerAngle : HTMLSpanElement = document.createElement('span');
 		tipInnerAngle.classList.add('tooltip-angle-inner');
 
+		tipParent.appendChild(tipIcon);
 		tipAngle.appendChild(tipInnerAngle);
 		tipMsg.appendChild(tipAngle);
-		tipParent.appendChild(tipIcon);
 		tipParent.appendChild(tipMsg);
 
 		return tipParent;
@@ -175,7 +193,7 @@ class Tooltip extends Widget {
 		const tipElement = Tooltip.GetTooltipParent(aTipElement);
 		tipElement.style.display = 'inline-block';
 		const tipInnerElement = tipElement.querySelector('.tooltip-inner') as HTMLSpanElement;
-		tipInnerElement.innerHTML = aMsg;
+		tipInnerElement.innerHTML = aMsg + tipInnerElement.innerHTML;;
 	}
 }
 
@@ -374,7 +392,7 @@ class Mask {
 			throw new Error('Call TextField.SetTextFieldMask with empty mask parameter!');
 		}
 
-		if (aType == 'number') aTextElement.style.textAlign = 'right';
+		aType == 'number' ?  aTextElement.style.textAlign = 'right' : aTextElement.style.textAlign = 'left';
 		let maskPlaceholder: string = aMaskStr;
 		aTextElement.setAttribute('placeholder', maskPlaceholder);
 		aTextElement.addEventListener('keypress', (evt) => {
@@ -389,12 +407,12 @@ class Mask {
 
 				if (Generic.IsPrintable(evt.key)) {
 					let oldStr = aTextElement.value;
-					let newStr = Mask.ApplyMask2Data(aTextElement, oldStr, evt.key, aMaskStr, aMaxLen);
+					let newStr = Mask.ApplyMask(aTextElement, oldStr, evt, aMaskStr, aMaxLen, aType);
 					if (newStr == oldStr) {
 						evt.preventDefault();
 					} else {
 						setTimeout(() => {
-							//aTextElement.value = newStr;
+							if (aType != 'number') aTextElement.value = newStr;
 						}, 100);
 					}
 				}
@@ -402,7 +420,7 @@ class Mask {
 		})
 		aTextElement.addEventListener('blur', (evt) => {
 			let oldStr = aTextElement.value;
-			let newStr = Mask.ApplyMask2Data(aTextElement, oldStr, '', aMaskStr, aMaxLen);
+			let newStr = Mask.ApplyMask(aTextElement, oldStr, evt, aMaskStr, aMaxLen, aType);
 			setTimeout(() => {aTextElement.value = newStr}, 100);
 		})
 	}
@@ -458,7 +476,7 @@ class Mask {
 		return result;
 	}
 
-	private static LongEnough(aDataStr: string, aMaskStr: string): boolean {
+	private static MaskLongEnough(aDataStr: string, aMaskStr: string): boolean {
 		let result = Mask.PadMaskAndCheckLength(aDataStr, aMaskStr);
 		return result.longEnough;
 	}
@@ -586,7 +604,7 @@ class Mask {
 			let leftPart: string = aMaskResult.substr(0, splitPosition);
 			let rightPart: string = aMaskResult.substr(splitPosition);
 			result = leftPart + repeatingPart + rightPart;
-			if (Mask.LongEnough(aDataStr, result) == false) { // if mask length still shorter then data length
+			if (Mask.MaskLongEnough(aDataStr, result) == false) { // if mask length still shorter then data length
 				result = Mask.ExtendMaskLength(result, aDataStr); // recursive until we extend till it's longer then original data length
 			} 
 		}
@@ -610,7 +628,21 @@ class Mask {
 		}
 	}
 
-	private static ApplyMask2Data(aInputElement: HTMLInputElement, aOldStr: string, aNewChar: string, aMaskStr: string, aMaxLen: number): string {
+	private static ApplyMask(aInputElement: HTMLInputElement, aOldStr: string, aEvt: Event, aMaskStr: string, aMaxLen: number, aType: string): string {
+		let keyedChar: string = '';
+		if (aEvt instanceof KeyboardEvent) keyedChar = aEvt.key;
+
+		if (aType == 'number') {
+			return Mask.ApplyNumMask(aInputElement, aOldStr, keyedChar, aMaskStr, aMaxLen);
+		} else {
+			let result: string = Mask.ApplyAlphaNumMask(aInputElement, aOldStr, keyedChar, aMaskStr, aMaxLen);
+			if (aEvt.type == 'blur') result = Mask.ApplyNumMask(aInputElement, aOldStr, '', aMaskStr, aMaxLen);
+			return result;
+
+		}
+	}
+
+	private static ApplyNumMask(aInputElement: HTMLInputElement, aOldStr: string, aNewChar: string, aMaskStr: string, aMaxLen: number): string {
 		if (! aMaskStr) return(aOldStr);
 		if (! (aOldStr + aNewChar)) return(aOldStr);
 		if (aOldStr.indexOf('.') >= 0 && aNewChar == '.') return(aOldStr);
@@ -622,7 +654,7 @@ class Mask {
 			}
 		} else { // no length limit
 			let normaliseDigit : string = Mask.GetNormaliseDigitForPadding(aMaskStr, aOldStr, aNewChar, keyPosition)
-			if (normaliseDigit && Mask.LongEnough(normaliseDigit, aMaskStr) == false) { // if need to extend mask length 
+			if (normaliseDigit && Mask.MaskLongEnough(normaliseDigit, aMaskStr) == false) { // if need to extend mask length 
 				aMaskStr = Mask.ExtendMaskLength(aMaskStr, normaliseDigit);
 				if (aMaskStr.length == 0) {
 					console.log('Cannot find repeating pattern in mask: ' + aMaskStr);
@@ -636,7 +668,7 @@ class Mask {
 
 		let result: string = aOldStr;
 		if (Generic.IsNumeric(aNewChar) || aMaskStr.indexOf(aNewChar) >= 0 || aNewChar.length == 0) {
-			result = Mask.GetAfterMaskingData(aOldStr, aNewChar, aMaskStr, keyPosition);
+			result = Mask.AfterNumberMasking(aOldStr, aNewChar, aMaskStr, keyPosition);
 			TextField.HideTextFieldErrorMsg(aInputElement);
 		} else {
 			TextField.ShowTextFieldErrorMsg(aInputElement, 'Must be number');
@@ -644,7 +676,7 @@ class Mask {
 		return result;
 	}
 
-	private static GetAfterMaskingData(aOldStr: string, aNewChar: string, aMaskStr: string, keyPosition: number = -1): string {
+	private static AfterNumberMasking(aOldStr: string, aNewChar: string, aMaskStr: string, keyPosition: number = -1): string {
 		let char2Remove: number[] = [];
 		let newStrData: string = aOldStr;
 		if (Generic.IsNumeric(aNewChar) || aMaskStr.indexOf(aNewChar) >= 0 || aNewChar.length == 0) {
@@ -697,5 +729,199 @@ class Mask {
 			}
 		}
 		return result;
+	}
+
+	/*
+	 *
+	 * Alpha Num masking
+	 *
+	 */
+
+	private static MaskLongEnoughForAlphaNum(aDataStr: string, aMaskStr: string): boolean {
+		let result = Mask.PadMaskAndCheckLengthForAlphaNum(aDataStr, aMaskStr);
+		return result.longEnough;
+	}
+
+	private static PadDataWithMaskForAlphaNum(aDataStr: string, aMaskStr: string): string {
+		let result = Mask.PadMaskAndCheckLengthForAlphaNum(aDataStr, aMaskStr);
+		return result.paddedData;
+	}
+
+	private static PadMaskAndCheckLengthForAlphaNum(aDataStr: string, aMaskStr: string): { paddedData: string, longEnough: boolean } {
+		let paddedAll: boolean = true;
+		let paddedData: string = '';
+		let maskStr: string = aMaskStr
+		let rawData: string = aDataStr
+		let cntrMask: number = 0;
+		let cntrData: number = 0;
+		for(cntrMask = 0; cntrMask < maskStr.length; cntrMask++) {
+			let maskChar = maskStr.charAt(cntrMask);
+			let dataChar = rawData.charAt(cntrData++);
+			if (dataChar.length == 0) {
+				paddedData += maskChar;
+			} else if (dataChar != maskChar) {
+				if (maskChar == '0' || maskChar == 'A' || maskChar == '#' || maskChar == '*' || maskChar == 'U' || maskChar == 'u') {
+					paddedData += dataChar;
+				} else {
+					paddedData += maskChar;
+					cntrData--;
+				}
+			} else {
+				paddedData += dataChar;
+			}
+		}
+		let cntrContinuePad : number = cntrData;
+		let cntrLongEnough : number = cntrData;
+
+		// continue padding if data len is > mask len
+		for(let cntr: number = cntrContinuePad ; cntr < rawData.length; cntr++) {
+			let dataChar = rawData.charAt(cntrContinuePad++);
+			paddedData += dataChar;
+		}
+
+		// check if all data is padded, if not meaning mask is not long enough
+		if (rawData.length > aMaskStr.length) {
+			paddedAll = false;
+		}
+
+		return { paddedData: paddedData, longEnough: paddedAll };
+	}
+
+
+	private static ApplyAlphaNumMask(aInputElement: HTMLInputElement, aOldStr: string, aNewChar: string, aMaskStr: string, aMaxLen: number): string {
+		if (! aMaskStr) return(aOldStr);
+		if (! (aOldStr + aNewChar)) return(aOldStr);
+		let keyPosition: number = aInputElement.selectionStart as number;
+
+		if (aMaxLen) {
+			if (aOldStr.length + aNewChar.length > aMaxLen) {
+				TextField.ShowTextFieldErrorMsg(aInputElement, 'Length exceeded');
+				return(aOldStr);
+			}
+		} else { // no length limit
+			let newStrData : string = Generic.InsertString(aOldStr, aNewChar, keyPosition);
+			if (newStrData && Mask.MaskLongEnoughForAlphaNum(newStrData, aMaskStr) == false) { // if need to extend mask length 
+				aMaskStr = Mask.ExtendMaskLength(aMaskStr, newStrData);
+				if (aMaskStr.length == 0) {
+					console.log('Cannot find repeating pattern in mask: ' + aMaskStr);
+					TextField.ShowTextFieldErrorMsg(aInputElement, 'Length exceeded');
+					return(aOldStr);
+				} else {
+					// do nothing
+				}
+			}
+		}
+
+		let result: string = aOldStr;
+		let afterMaskresult = Mask.AfterAlphaNumMasking(aOldStr, aNewChar, aMaskStr, keyPosition);
+		result = afterMaskresult.afterMaskStr;
+		if (afterMaskresult.errorMsg.length != 0) {
+			TextField.ShowTextFieldErrorMsg(aInputElement, afterMaskresult.errorMsg);
+		} else {
+			TextField.HideTextFieldErrorMsg(aInputElement);
+		}
+		return result;
+	}
+
+	private static IsAlphaNumReserveChar(aTheChar: string): boolean {
+		let result: boolean = false;
+		if (aTheChar == '*'
+		|| aTheChar == '#'
+		|| aTheChar == 'A'
+		|| aTheChar == 'U'
+		|| aTheChar == 'u'
+		|| aTheChar == '0'
+		) {
+			result = true;
+		}
+		return result;
+	}
+
+	private static AfterAlphaNumMasking(aOldStr: string, aNewChar: string, aMaskStr: string, keyPosition: number = -1): { afterMaskStr: string, errorMsg: string } {
+		let errorMsg: string = '';
+		let result: string = '';
+		let newStrData: string = Generic.InsertString(aOldStr, aNewChar, keyPosition);
+		let cntrData: number = 0;
+		let cntrMask: number = 0;
+		while(cntrMask < aMaskStr.length) {
+			let maskChar = aMaskStr.charAt(cntrMask++);
+			let dataChar = newStrData.charAt(cntrData++);
+			if (dataChar.length == 0) break;
+			if (maskChar == dataChar ) {
+				let occInData = Generic.CharOccurence(result, maskChar); // find occurence for this char in data
+				let occInMask = Generic.CharOccurence(aMaskStr, maskChar); // find occurence for this char in mask
+				if (occInData < occInMask) result += dataChar;
+			} else if (Mask.IsAlphaNumReserveChar(dataChar) == false && aMaskStr.indexOf(dataChar) >= 0) { // not reserve char and is a mask char
+				let maskPosition: number = aMaskStr.indexOf(dataChar);
+				if (aNewChar == '.') {
+					result = '';
+					for(let cntr: number = 0; cntr < maskPosition + 1; cntr++) {
+						let charAt: string = aOldStr.charAt(cntr);
+						if (charAt) {
+							result += charAt;
+						} else {
+							let maskAt : string = aMaskStr.charAt(cntr);
+							if (maskAt != '#') {
+								if (maskAt == '0') {
+									if (Generic.IsNumeric(Generic.OnlyDigitAndDot(result)) == false) {
+										result += maskAt;
+									}
+								} else {
+									if (maskAt != ',' && Generic.IsNumeric(charAt) == false) {
+										let occInData = Generic.CharOccurence(result, maskAt); // find occurence for this char in data
+										let occInMask = Generic.CharOccurence(aMaskStr, maskAt); // find occurence for this char in mask
+										if (occInData < occInMask) result += maskAt;
+									}
+								}
+							}
+						}
+					}
+				} else {
+					let occInData = Generic.CharOccurence(result, dataChar); // find occurence for this char in data
+					let occInMask = Generic.CharOccurence(aMaskStr, dataChar); // find occurence for this char in mask
+					if (occInData < occInMask) { // if occurence less then that in the mask then append it, else ignore it
+						result += dataChar;
+						cntrMask = maskPosition + 1;  // jump to the keyed mask char ignoring whatever char in front of it
+					} else {
+						cntrMask--;
+					}
+				}
+			} else if (maskChar == '*') {
+				result += dataChar;
+			} else if (maskChar == '#' || maskChar == '0') {
+				if (Generic.IsNumeric(dataChar)) {
+					result += dataChar;
+				} else {
+					errorMsg = 'Keyed character must be number'
+					result = aOldStr;
+					break;
+				}
+			} else if (maskChar == 'A' || maskChar == 'U' || maskChar == 'u') {
+				if (Generic.IsAlpha(dataChar)) {
+					if (maskChar == 'U')
+						result += dataChar.toUpperCase();
+					else if (maskChar == 'u')
+						result += dataChar.toLocaleLowerCase();
+					else
+						result += dataChar;
+				} else {
+					errorMsg = 'Keyed character cannot be number'
+					result = aOldStr;
+					break;
+				}
+			} else if (maskChar == 'X') {
+				if (Generic.IsAlpha(dataChar) || Generic.IsNumeric(dataChar)) {
+					result += dataChar;
+				} else {
+					errorMsg = 'Keyed character cannot be symbol'
+					result = aOldStr;
+					break;
+				}
+			} else {
+				result += maskChar;
+				cntrData--;
+			}
+		}
+		return { afterMaskStr: result, errorMsg: errorMsg };
 	}
 }

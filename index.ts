@@ -1,12 +1,15 @@
-
-//import {TextField} from  './UiUtil';
-
 //let testInput: HTMLInputElement = TextField.CreateTextFieldNoLabel('idText', '');
 //const testInputDiv: HTMLDivElement = TextField.CreateTextField('Zip', '', 'id-test-input', 'number', '$###,###,##0.00', 'data.test', 32, undefined);
 //const testInputDiv: HTMLDivElement = TextField.CreateTextField('Zip', '', 'id-test-input', 'number', '$###,###,###,##0.00', 'data.test', 32, undefined);
-const testInputDiv: HTMLDivElement = TextField.CreateTextField('Zip', '', 'id-test-input', 'number', '$##,##,##,##0.00', 'data.test', 52, undefined);
+//const testInputDiv: HTMLDivElement = TextField.CreateTextField('Zip', '', 'id-test-input', 'number', '$##,##,##,##0.00', 'data.test', 52, undefined);
 //const testInputDiv: HTMLDivElement = TextField.CreateTextField('Zip', '', 'id-test-input', 'number', '$##,##,##,##0.00', 'data.test', 52, 3);
 //const testInputDiv: HTMLDivElement = TextField.CreateTextField('Zip', '', 'id-test-input', 'number', '########', 'data.test', 52, undefined);
+//const testInputDiv: HTMLDivElement = TextField.CreateTextField('Zip', '', 'id-test-input', 'number', '$###.##', 'data.test', 52, undefined);
+//const testInputDiv: HTMLDivElement = TextField.CreateTextField('Zip', '', 'id-test-input', 'string', '$##0.00', 'data.test', 52, undefined);
+//const testInputDiv: HTMLDivElement = TextField.CreateTextField('Zip', '', 'id-test-input', 'string', '$###,##0.00', 'data.test', 52, undefined);
+//const testInputDiv: HTMLDivElement = TextField.CreateTextField('Zip', '', 'id-test-input', 'string', '######-##-####', 'data.test', 52, undefined);
+//const testInputDiv: HTMLDivElement = TextField.CreateTextField('Zip', '', 'id-test-input', 'string', 'U#######', 'data.test', 52, undefined);
+const testInputDiv: HTMLDivElement = TextField.CreateTextField('Zip', '', 'id-test-input', 'string', '+## (#) ##-###-###-##', 'data.test', 30, 21);
 //testInput.style.textAlign = 'right';
 //TextField.SetTextFieldMask(testInput, '###,##0.00');
 //TextField.SetTextFieldMask(testInput, '$###,##0.00');
