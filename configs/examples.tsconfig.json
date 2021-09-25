@@ -1,0 +1,12 @@
+{
+  "extends": "./base.tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../out",
+    "declaration": false,
+    "declarationMap": false
+  },
+  "files": ["../examples/app.ts"],
+  "exclude": [
+    "**/*.spec.ts", "**/*.spec.tsx", "src/utils/test-helper.ts"
+  ]
+}
